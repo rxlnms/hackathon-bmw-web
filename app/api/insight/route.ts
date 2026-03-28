@@ -2,63 +2,60 @@ import OpenAI from "openai";
 
 export async function POST(req: Request) {
   try {
-    const apiKey = process.env.OPENAI_API_KEY;
+    const body = await req.json();
 
-    if (!apiKey) {
-      return Response.json(
-        { error: "OPENAI_API_KEY is missing." },
-        { status: 500 }
-      );
-    }
-
-    const client = new OpenAI({ apiKey });
-
-    const { employee } = await req.json();
-
-    if (!employee) {
-      return Response.json(
-        { error: "Employee data is required." },
-        { status: 400 }
-      );
-    }
-
-    const prompt = `
-You are an HR leadership analytics assistant.
-
-Analyze this employee and return a concise, executive-friendly response in exactly this format:
-
-Value Summary:
-[2-3 sentences]
-
-Recognition Gap:
-[1-2 sentences]
-
-Burnout Risk:
-[Low / Medium / High + short explanation]
-
-Recommended Actions:
-- action 1
-- action 2
-- action 3
-
-Employee data:
-${JSON.stringify(employee, null, 2)}
-`;
-
-    const response = await client.responses.create({
-      model: "gpt-5.4-mini",
-      input: prompt,
+    const client = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
     });
 
-    return Response.json({
-      text: response.output_text,
+    const completion = await client.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        {
+          role: "system",
+          content: "You are an HR AI that analyzes employee performance and gives short insights.",
+        },
+        {
+          role: "user",
+          content: `Analyze this employee: ${JSON.stringify(body)}`,
+        },
+      ],
     });
+
+    return new Response(
+      JSON.stringify({
+        result: completion.choices[0].message.content,
+      }),
+      {
+        status: 200,
+        headers: {
+          "Content-Type": "application/json",
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Methods": "POST, OPTIONS",
+          "Access-Control-Allow-Headers": "Content-Type",
+        },
+      }
+    );
   } catch (error) {
-    console.error("OpenAI route error:", error);
-
-    return Response.json(
-      { error: "Failed to generate insight." },
-      { status: 500 }
+    return new Response(
+      JSON.stringify({ error: "AI request failed" }),
+      {
+        status: 500,
+        headers: {
+          "Access-Control-Allow-Origin": "*",
+        },
+      }
     );
   }
+}
+
+export async function OPTIONS() {
+  return new Response(null, {
+    status: 200,
+    headers: {
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "POST, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type",
+    },
+  });
 }
