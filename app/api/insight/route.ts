@@ -29,25 +29,13 @@ export async function POST(req: Request) {
     const client = new OpenAI({ apiKey });
 
     const prompt = `
-You are an HR leadership analytics assistant.
-
-Analyze this employee and return a concise response in exactly this format:
-
+Analyze this employee and return:
 Value Summary:
-[2-3 sentences]
-
 Recognition Gap:
-[1-2 sentences]
-
 Burnout Risk:
-[Low / Medium / High + short explanation]
-
 Recommended Actions:
-- action 1
-- action 2
-- action 3
 
-Employee data:
+Employee:
 ${JSON.stringify(employee, null, 2)}
 `;
 
@@ -58,24 +46,21 @@ ${JSON.stringify(employee, null, 2)}
 
     return new Response(
       JSON.stringify({
-        text: response.output_text,
+        text: response.output_text ?? "No text returned",
       }),
-      {
-        status: 200,
-        headers: corsHeaders,
-      }
+      { status: 200, headers: corsHeaders }
     );
   } catch (error: any) {
-    console.error("API ERROR:", error);
+    console.error("OPENAI FULL ERROR:", error);
 
     return new Response(
       JSON.stringify({
-        error: error?.message || "Failed to generate insight.",
+        error: error?.message || "Unknown error",
+        status: error?.status ?? null,
+        code: error?.code ?? null,
+        type: error?.type ?? null,
       }),
-      {
-        status: 500,
-        headers: corsHeaders,
-      }
+      { status: 500, headers: corsHeaders }
     );
   }
 }
